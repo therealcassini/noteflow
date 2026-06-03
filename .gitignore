@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+upload/*.png
+upload/*.jpg
+upload/*.jpeg
+upload/*.gif
+upload/*.webp
+data/
+probe*.js
+test-electron.js

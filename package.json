@@ -1,0 +1,13 @@
+{
+  "name": "noteflow",
+  "version": "1.0.0",
+  "description": "NoteFlow - 轻量笔记日历应用",
+  "main": "main.js",
+  "scripts": {
+    "start": "node start.js",
+    "dev": "node start.js --dev"
+  },
+  "dependencies": {
+    "electron": "31.7.7"
+  }
+}

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NoteFlow - 轻量笔记日历</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ═══════════════ SIDEBAR ═══════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-text">NoteFlow</span>
+      <span class="logo-subtitle">轻量笔记 · 日历视图</span>
+    </div>
+
+    <div class="sidebar-search">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="5" stroke="#A8A29E" stroke-width="1.5"/>
+        <path d="M11 11L14 14" stroke="#A8A29E" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input type="text" class="search-input" placeholder="搜索笔记..." id="searchInput">
+    </div>
+
+    <div class="sidebar-section">
+      <span class="section-label">视图</span>
+      <nav class="nav-list">
+        <button class="nav-item active" data-view="month" id="navMonth">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="2" y="3" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M2 7h14M12 1v4M6 1v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span>月视图</span>
+        </button>
+        <button class="nav-item" data-view="week" id="navWeek">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="2" y="3" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M2 7h14M5 10h8M5 13h5" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+          <span>周视图</span>
+        </button>
+        <button class="nav-item" data-view="year" id="navYear">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="2" y="3" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M2 7h14" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="9" cy="11" r="2" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+          <span>年视图</span>
+        </button>
+        <button class="nav-item" data-view="stats" id="navStats">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="2" y="2" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="6" y="10" width="2" height="4" rx="0.5" fill="currentColor"/>
+            <rect x="10" y="7" width="2" height="7" rx="0.5" fill="currentColor"/>
+            <rect x="14" y="5" width="2" height="9" rx="0.5" fill="currentColor"/>
+          </svg>
+          <span>统计</span>
+        </button>
+      </nav>
+    </div>
+
+    <div class="sidebar-section">
+      <span class="section-label">标签</span>
+      <div class="tag-list" id="tagList"></div>
+      <div class="tag-add-row">
+        <input type="text" class="tag-add-input" id="tagAddInput" placeholder="新建标签..." maxlength="10">
+        <button class="tag-add-btn" id="btnAddTag" title="添加标签">+</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+  <main class="main-content">
+
+    <!-- ─── MONTH VIEW ─── -->
+    <section class="view" id="monthView">
+      <div class="view-layout">
+        <!-- Calendar Area -->
+        <div class="calendar-area">
+          <div class="filter-bar hidden" id="filterBar">
+            <span class="filter-text" id="filterText"></span>
+            <button class="filter-clear" id="btnClearFilter">× 清除筛选</button>
+          </div>
+          <div class="calendar-header">
+            <button class="btn-icon" id="monthPrev">‹</button>
+            <h2 class="calendar-title" id="monthTitle">2026年 6月</h2>
+            <button class="btn-icon" id="monthNext">›</button>
+            <button class="btn-today" id="monthToday">今天</button>
+          </div>
+          <div class="calendar-weekdays">
+            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+          </div>
+          <div class="calendar-grid" id="monthGrid"></div>
+        </div>
+
+        <!-- Quick Edit Panel -->
+        <div class="edit-panel" id="quickEditPanel">
+          <div class="panel-header">
+            <span class="panel-date" id="panelDate">选择日期</span>
+            <button class="btn-new" id="btnNewNote">+ 新建</button>
+          </div>
+
+          <div class="quick-editor" id="quickEditor">
+            <input type="text" class="editor-title-input" id="quickTitle" placeholder="笔记标题（可选）">
+            <div class="editor-toolbar">
+              <button class="tb-btn" data-cmd="bold" title="加粗"><b>B</b></button>
+              <button class="tb-btn" data-cmd="italic" title="斜体"><i>I</i></button>
+              <button class="tb-btn" data-cmd="insertUnorderedList" title="列表">≡</button>
+              <button class="tb-btn" id="btnInsertImage" title="插入图片">🖼</button>
+              <div class="tb-tags" id="tbTags"></div>
+            </div>
+            <div class="editor-body" contenteditable="true" id="editorBody" placeholder="写下你的想法...&#10;支持粘贴图片 (Ctrl+V)"></div>
+            <div class="editor-footer">
+              <span class="current-tags" id="currentTags"></span>
+              <button class="btn-save" id="btnSaveNote">保存笔记</button>
+            </div>
+          </div>
+
+          <div class="note-list" id="noteList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── WEEK VIEW ─── -->
+    <section class="view hidden" id="weekView">
+      <div class="filter-bar hidden" id="weekFilterBar">
+        <span class="filter-text" id="weekFilterText"></span>
+        <button class="filter-clear" id="btnWeekClearFilter">× 清除筛选</button>
+      </div>
+      <div class="week-header">
+        <button class="btn-icon" id="weekPrev">‹</button>
+        <h2 class="week-title" id="weekTitle">2026年 6月1日 - 6月7日</h2>
+        <button class="btn-icon" id="weekNext">›</button>
+        <button class="btn-today" id="weekToday">本周</button>
+      </div>
+      <div class="week-grid" id="weekGrid"></div>
+    </section>
+
+    <!-- ─── YEAR VIEW ─── -->
+    <section class="view hidden" id="yearView">
+      <div class="year-header">
+        <div class="year-nav">
+          <button class="btn-icon" id="yearPrev">‹</button>
+          <h2 class="year-title" id="yearTitle">2026年</h2>
+          <button class="btn-icon" id="yearNext">›</button>
+        </div>
+        <button class="btn-today" id="yearToday">今年</button>
+      </div>
+      <div class="year-stats" id="yearStats">
+        <div class="stat-card stat-progress">
+          <div class="stat-head"><span class="stat-value" id="statYearPct">0%</span><span class="stat-total-notes" id="statTotal">0条</span></div>
+          <span class="stat-label">当年已过</span>
+          <div class="progress-bar"><div class="progress-fill year-fill" id="barYear"></div></div>
+        </div>
+        <div class="stat-card stat-progress">
+          <div class="stat-head"><span class="stat-value" id="statMonthPct">0%</span></div>
+          <span class="stat-label">当月已过</span>
+          <div class="progress-bar"><div class="progress-fill month-fill" id="barMonth"></div></div>
+        </div>
+        <div class="stat-card stat-progress">
+          <div class="stat-head"><span class="stat-value" id="statWeekPct">0%</span></div>
+          <span class="stat-label">当周已过</span>
+          <div class="progress-bar"><div class="progress-fill week-fill" id="barWeek"></div></div>
+        </div>
+      </div>
+      <div class="year-grid" id="yearGrid"></div>
+    </section>
+
+    <!-- ─── STATS VIEW ─── -->
+    <section class="view hidden" id="statsView">
+      <div class="stats-container">
+        <div class="stats-toolbar">
+          <h2 class="stats-title">数据统计</h2>
+          <div class="stats-filters">
+            <label>月份</label>
+            <select id="statsMonthFilter">
+              <option value="all">全部</option>
+            </select>
+            <label>年份</label>
+            <select id="statsYearFilter">
+            </select>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stats-chart-card">
+            <h3>按日期统计 (柱状图)</h3>
+            <div class="chart-wrap" id="chartBar"></div>
+          </div>
+          <div class="stats-chart-card">
+            <h3>标签分布 (饼图)</h3>
+            <div class="chart-wrap" id="chartPie"></div>
+          </div>
+        </div>
+        <div class="stats-chart-card chart-full">
+          <h3>笔记关联图 (节点图)</h3>
+          <div class="chart-wrap" id="chartGraph"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── EDIT VIEW (Detail) ─── -->
+    <section class="view hidden" id="editView">
+      <div class="edit-layout">
+        <div class="note-list-panel" id="editNoteList"></div>
+        <div class="detail-editor" id="detailEditor">
+          <div class="detail-toolbar">
+            <button class="btn-back" id="btnBackFromEdit" title="返回">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              返回
+            </button>
+            <span class="tb-sep">|</span>
+            <button class="tb-btn" data-cmd="formatBlock" data-val="h1" title="标题1">H1</button>
+            <button class="tb-btn" data-cmd="formatBlock" data-val="h2" title="标题2">H2</button>
+            <button class="tb-btn" data-cmd="bold" title="加粗"><b>B</b></button>
+            <button class="tb-btn" data-cmd="italic" title="斜体"><i>I</i></button>
+            <button class="tb-btn" data-cmd="underline" title="下划线"><u>U</u></button>
+            <button class="tb-btn" data-cmd="insertUnorderedList" title="无序列表">≡</button>
+            <button class="tb-btn" data-cmd="insertOrderedList" title="有序列表">≣</button>
+            <button class="tb-btn" id="detailInsertImage" title="插入图片">🖼</button>
+            <span class="tb-grow"></span>
+            <button class="tb-btn tb-danger" id="btnDeleteNote" title="删除">🗑</button>
+            <button class="tb-btn tb-primary" id="btnUpdateNote" title="保存">保存</button>
+          </div>
+          <input type="text" class="detail-title-input" id="detailTitle" placeholder="笔记标题">
+          <div class="detail-body" contenteditable="true" id="detailBody"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Image paste overlay -->
+<div class="image-modal hidden" id="imageModal">
+  <div class="image-modal-content">
+    <p>粘贴图片 (Ctrl+V) 或</p>
+    <button class="btn-save" id="btnChooseImage">选择图片文件</button>
+    <button class="btn-cancel" id="btnCancelImage">取消</button>
+    <div class="image-preview" id="imagePreview"></div>
+    <button class="btn-save hidden" id="btnConfirmImage">确认插入</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
