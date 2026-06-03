@@ -42,6 +42,9 @@ function loadStore() {
       for (const n of store.notes) {
         if (n.title === undefined) n.title = '';
       }
+      for (const img of store.images) {
+        if (img.subdir === undefined) img.subdir = '';
+      }
       // Seed default tags if empty
       if (store.tags.length === 0) {
         store.tags = [...DEFAULT_TAGS];
@@ -132,7 +135,7 @@ function setupIPC() {
     // Delete associated image files
     const imgs = store.images.filter(img => img.note_id === id);
     for (const img of imgs) {
-      const imgPath = path.join(UPLOAD_DIR, img.filename);
+      const imgPath = path.join(UPLOAD_DIR, img.subdir || '', img.filename);
       if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
     }
     // Remove images metadata
@@ -299,17 +302,23 @@ function setupIPC() {
   // Image handling
   ipcMain.handle('image:save', (_, { noteId, buffer, originalName }) => {
     loadStore();
+    const now = new Date();
+    const subdir = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const subdirPath = path.join(UPLOAD_DIR, subdir);
+    if (!fs.existsSync(subdirPath)) fs.mkdirSync(subdirPath, { recursive: true });
+
     const ext = path.extname(originalName) || '.png';
     const filename = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-    const filepath = path.join(UPLOAD_DIR, filename);
+    const filepath = path.join(subdirPath, filename);
     fs.writeFileSync(filepath, Buffer.from(buffer));
 
     const img = {
       id: store.nextImageId++,
       note_id: noteId,
+      subdir,
       filename,
       original_name: originalName || '',
-      created_at: new Date().toISOString()
+      created_at: now.toISOString()
     };
     store.images.push(img);
 
@@ -331,8 +340,22 @@ function setupIPC() {
 
   // Read image file as base64 for display
   ipcMain.handle('image:read', (_, filename) => {
-    const filepath = path.join(UPLOAD_DIR, filename);
-    if (!fs.existsSync(filepath)) return null;
+    // Search in subdirectories (YYYY_MM) and root upload
+    const searchFile = (dir) => {
+      if (!fs.existsSync(dir)) return null;
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const e of entries) {
+        if (e.isDirectory()) {
+          const fp = path.join(dir, e.name, filename);
+          if (fs.existsSync(fp)) return fp;
+        } else if (e.name === filename) {
+          return path.join(dir, filename);
+        }
+      }
+      return null;
+    };
+    const filepath = searchFile(UPLOAD_DIR);
+    if (!filepath) return null;
 
     const ext = path.extname(filename).toLowerCase();
     const mimeMap = {
@@ -351,7 +374,7 @@ function setupIPC() {
     if (idx === -1) return { success: false };
 
     const img = store.images[idx];
-    const filepath = path.join(UPLOAD_DIR, img.filename);
+    const filepath = path.join(UPLOAD_DIR, img.subdir || '', img.filename);
     if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
 
     store.images.splice(idx, 1);
@@ -394,7 +417,7 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 680,
     title: 'NoteFlow',
-    icon: path.join(__dirname, 'upload', 'icon.png'),
+    icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

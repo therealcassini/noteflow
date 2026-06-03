@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 520" width="100%" role="img">
+  <title>笔记应用Icon设计方案 - 简洁纯色风格</title>
+  <desc>A clean note-taking app icon featuring a folded page symbol on a solid colored rounded square background, with three color variants below</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <style>
+    .label { font-family: "Inter", system-ui, sans-serif; font-size: 13px; font-weight: 500; fill: #3C3489; }
+  </style>
+
+  <!-- Main Icon: Purple -->
+  <rect x="190" y="28" width="300" height="300" rx="56" fill="#7F77DD" />
+  
+  <!-- Page body -->
+  <path d="M 245 72 L 399 72 L 435 108 L 435 305 L 245 305 Z" fill="#FFFFFF" />
+  
+  <!-- Folded corner flap -->
+  <path d="M 399 72 L 435 72 L 435 108 Z" fill="#EEEDFE" />
+  
+  <!-- Text lines on page -->
+  <line x1="263" y1="128" x2="390" y2="128" stroke="#CECBF6" stroke-width="6" stroke-linecap="round" />
+  <line x1="263" y1="158" x2="412" y2="158" stroke="#CECBF6" stroke-width="6" stroke-linecap="round" />
+  <line x1="263" y1="188" x2="345" y2="188" stroke="#CECBF6" stroke-width="6" stroke-linecap="round" />
+  <line x1="263" y1="218" x2="400" y2="218" stroke="#CECBF6" stroke-width="6" stroke-linecap="round" />
+  <line x1="263" y1="248" x2="380" y2="248" stroke="#CECBF6" stroke-width="6" stroke-linecap="round" />
+  
+  <!-- Bookmark tab -->
+  <path d="M 315 72 L 335 72 L 335 82 L 325 76 L 315 82 Z" fill="#534AB7" />
+
+  <!-- Color Variants -->
+  <!-- Variant 1: Teal -->
+  <rect x="184" y="370" width="84" height="84" rx="24" fill="#1D9E75" />
+  <path d="M 201 386 L 243 386 L 253 396 L 253 439 L 201 439 Z" fill="#FFFFFF" />
+  <path d="M 243 386 L 253 386 L 253 396 Z" fill="#E1F5EE" />
+  <line x1="209" y1="406" x2="240" y2="406" stroke="#9FE1CB" stroke-width="3" stroke-linecap="round" />
+  <line x1="209" y1="418" x2="246" y2="418" stroke="#9FE1CB" stroke-width="3" stroke-linecap="round" />
+  <line x1="209" y1="430" x2="232" y2="430" stroke="#9FE1CB" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Variant 2: Blue -->
+  <rect x="298" y="370" width="84" height="84" rx="24" fill="#378ADD" />
+  <path d="M 315 386 L 357 386 L 367 396 L 367 439 L 315 439 Z" fill="#FFFFFF" />
+  <path d="M 357 386 L 367 386 L 367 396 Z" fill="#E6F1FB" />
+  <line x1="323" y1="406" x2="354" y2="406" stroke="#B5D4F4" stroke-width="3" stroke-linecap="round" />
+  <line x1="323" y1="418" x2="360" y2="418" stroke="#B5D4F4" stroke-width="3" stroke-linecap="round" />
+  <line x1="323" y1="430" x2="346" y2="430" stroke="#B5D4F4" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Variant 3: Coral -->
+  <rect x="412" y="370" width="84" height="84" rx="24" fill="#D85A30" />
+  <path d="M 429 386 L 471 386 L 481 396 L 481 439 L 429 439 Z" fill="#FFFFFF" />
+  <path d="M 471 386 L 481 386 L 481 396 Z" fill="#FAECE7" />
+  <line x1="437" y1="406" x2="468" y2="406" stroke="#F5C4B3" stroke-width="3" stroke-linecap="round" />
+  <line x1="437" y1="418" x2="474" y2="418" stroke="#F5C4B3" stroke-width="3" stroke-linecap="round" />
+  <line x1="437" y1="430" x2="460" y2="430" stroke="#F5C4B3" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Labels -->
+  <text x="226" y="478" class="label" text-anchor="middle">紫色</text>
+  <text x="340" y="478" class="label" text-anchor="middle">蓝色</text>
+  <text x="454" y="478" class="label" text-anchor="middle">珊瑚</text>
+</svg>

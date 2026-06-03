@@ -7,10 +7,12 @@ const state = {
   selectedDate: null,
   currentNoteId: null,
   selectedTags: [],
+  detailTags: [],      // tags for detail editor
   pendingImage: null,
   tags: [],            // loaded tag definitions
   activeFilterTag: null, // tag name for filtering, null = show all
   searchQuery: '',     // current search text
+  autoSaveTimer: null, // debounce timer ID
   // Date navigation
   monthDate: new Date(),
   weekDate: new Date(),
@@ -151,24 +153,40 @@ function renderSidebarTags() {
 }
 
 function renderToolbarTags() {
-  const container = document.getElementById('tbTags');
-  if (!container) return;
-  container.innerHTML = state.tags.map(t => `
-    <button class="tb-tag" data-tag="${t.name}" data-tag-id="${t.id}" style="background:${t.color}">${escapeHtml(t.name)}</button>
-  `).join('');
+  // Quick editor toolbar
+  const quickContainer = document.getElementById('tbTags');
+  if (quickContainer) {
+    quickContainer.innerHTML = state.tags.map(t => `
+      <button class="tb-tag" data-tag="${t.name}" data-tag-id="${t.id}" style="background:${t.color}">${escapeHtml(t.name)}</button>
+    `).join('');
+    bindTagButtons(quickContainer, 'quick');
+  }
 
-  // Re-bind events
+  // Detail editor toolbar
+  const detailContainer = document.getElementById('detailTbTags');
+  if (detailContainer) {
+    detailContainer.innerHTML = state.tags.map(t => `
+      <button class="tb-tag" data-tag="${t.name}" data-tag-id="${t.id}" style="background:${t.color}">${escapeHtml(t.name)}</button>
+    `).join('');
+    bindTagButtons(detailContainer, 'detail');
+  }
+}
+
+function bindTagButtons(container, mode) {
   container.querySelectorAll('.tb-tag').forEach(btn => {
     btn.addEventListener('click', () => {
       const tag = btn.dataset.tag;
-      if (state.selectedTags.includes(tag)) {
-        state.selectedTags = state.selectedTags.filter(t => t !== tag);
+      const tagList = mode === 'detail' ? state.detailTags : state.selectedTags;
+      if (tagList.includes(tag)) {
+        if (mode === 'detail') state.detailTags = state.detailTags.filter(t => t !== tag);
+        else state.selectedTags = state.selectedTags.filter(t => t !== tag);
         btn.classList.remove('active');
       } else {
-        state.selectedTags.push(tag);
+        if (mode === 'detail') state.detailTags.push(tag);
+        else state.selectedTags.push(tag);
         btn.classList.add('active');
       }
-      updateTagDisplay();
+      if (mode === 'quick') updateTagDisplay();
     });
   });
 }
@@ -354,43 +372,18 @@ function createCalendarCell(day, dateStr, dotMap, titleMap, otherMonth) {
   if (dateStr === today) cell.classList.add('today');
   if (dateStr === state.selectedDate) cell.classList.add('selected');
 
-  cell.innerHTML = `<span class="day-num">${day}</span>`;
+  // Day number badge
+  const dayNum = document.createElement('span');
+  dayNum.className = 'day-num';
+  dayNum.textContent = day;
+  cell.appendChild(dayNum);
 
-  // Dots
-  const count = dotMap[dateStr] || 0;
-  if (count > 0) {
-    const dotsDiv = document.createElement('div');
-    dotsDiv.className = 'note-dots';
-    const entries = titleMap[dateStr] || [];
-    const seenColors = new Set();
-    entries.forEach(e => {
-      e.tags.forEach(tagName => {
-        const color = getTagColor(tagName);
-        if (!seenColors.has(color)) {
-          const dot = document.createElement('span');
-          dot.className = 'note-dot';
-          dot.style.background = color;
-          dotsDiv.appendChild(dot);
-          seenColors.add(color);
-        }
-      });
-    });
-    if (count > seenColors.size) {
-      const more = document.createElement('span');
-      more.style.cssText = 'font-size:9px;color:var(--text-muted);';
-      more.textContent = `+${count}`;
-      dotsDiv.appendChild(more);
-    }
-    cell.appendChild(dotsDiv);
-  }
-
-  // Titles (show up to 3)
+  // Titles (let CSS overflow decide how many to show)
   const titles = titleMap[dateStr] || [];
   if (titles.length > 0) {
     const titlesDiv = document.createElement('div');
     titlesDiv.className = 'cell-titles';
-    const shown = titles.slice(0, 2);
-    shown.forEach(t => {
+    titles.forEach(t => {
       const span = document.createElement('span');
       span.className = 'cell-title';
       const inner = document.createElement('span');
@@ -400,13 +393,6 @@ function createCalendarCell(day, dateStr, dotMap, titleMap, otherMonth) {
       span.title = t.title;
       titlesDiv.appendChild(span);
     });
-    if (titles.length > 2) {
-      const moreSpan = document.createElement('span');
-      moreSpan.className = 'cell-title';
-      moreSpan.style.color = 'var(--accent)';
-      moreSpan.textContent = `+${titles.length - 2} 更多`;
-      titlesDiv.appendChild(moreSpan);
-    }
     cell.appendChild(titlesDiv);
   }
 
@@ -529,16 +515,19 @@ async function openNoteDetail(id) {
   document.getElementById('detailTitle').value = note.title || '';
   document.getElementById('detailBody').innerHTML = note.content || '';
 
+  // Restore tags
+  state.detailTags = (note.tags || '').split(',').filter(Boolean);
+  document.querySelectorAll('#detailTbTags .tb-tag').forEach(btn => {
+    btn.classList.toggle('active', state.detailTags.includes(btn.dataset.tag));
+  });
+
   // Load images and append to body
   const images = await getNoteImages(id);
   for (const img of images) {
-    const dataUrl = await readImageFile(img.filename);
-    if (dataUrl) {
-      const imgEl = document.createElement('img');
-      imgEl.src = dataUrl;
-      imgEl.style.maxWidth = '100%';
-      document.getElementById('detailBody').appendChild(imgEl);
-    }
+      const dataUrl = await readImageFile(img.filename);
+      if (dataUrl) {
+        insertImageIntoEditor(document.getElementById('detailBody'), dataUrl);
+      }
   }
 
   // Switch to edit view with this note
@@ -551,7 +540,13 @@ async function saveNoteDetail() {
   const title = document.getElementById('detailTitle').value.trim();
   const content = document.getElementById('detailBody').innerHTML;
   const plainText = htmlToPlain(content);
-  await updateNote({ id: state.currentNoteId, title, content, plain_text: plainText });
+  // Read tags directly from active buttons (most reliable)
+  const tagNames = [];
+  document.querySelectorAll('#detailTbTags .tb-tag.active').forEach(btn => {
+    tagNames.push(btn.dataset.tag);
+  });
+  state.detailTags = tagNames;
+  await updateNote({ id: state.currentNoteId, title, content, plain_text: plainText, tags: tagNames.join(',') });
   renderEditNoteList();
 }
 
@@ -564,11 +559,57 @@ async function deleteCurrentNote() {
   renderEditNoteList();
 }
 
+// ─── Auto-Save ────────────────────────────────────────────
+function scheduleAutoSave() {
+  if (state.autoSaveTimer) clearTimeout(state.autoSaveTimer);
+  state.autoSaveTimer = setTimeout(async () => {
+    if (state.currentView === 'edit' && state.currentNoteId) {
+      await saveNoteDetail();
+    } else if (state.currentView === 'month' && state.currentNoteId) {
+      const content = document.getElementById('editorBody').innerHTML;
+      if (content.trim()) await saveNoteSilent();
+    }
+    showAutoSaveIndicator();
+    state.autoSaveTimer = null;
+  }, 3000);
+}
+
+async function saveNoteSilent() {
+  if (!state.currentNoteId) return;
+  const title = document.getElementById('quickTitle').value.trim();
+  const content = document.getElementById('editorBody').innerHTML;
+  const plainText = htmlToPlain(content);
+  const tags = state.selectedTags.join(',');
+  await updateNote({ id: state.currentNoteId, title, content, plain_text: plainText, tags });
+}
+
+function showAutoSaveIndicator() {
+  const el = document.getElementById('autosaveIndicator');
+  if (!el) return;
+  el.classList.add('show');
+  el.classList.remove('hidden');
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.classList.add('hidden'), 400);
+  }, 2000);
+}
+
 async function renderEditNoteList() {
   const container = document.getElementById('editNoteList');
   const start = `${state.yearDate.getFullYear()}-01-01`;
   const end = `${state.yearDate.getFullYear()}-12-31`;
-  const notes = await loadNotesByRange(start, end);
+  let notes = await loadNotesByRange(start, end);
+
+  // Apply search filter if active
+  if (state.searchQuery) {
+    const ql = state.searchQuery.toLowerCase();
+    notes = notes.filter(n => {
+      const title = (n.title || '').toLowerCase();
+      const plain = (n.plain_text || '').toLowerCase();
+      return title.includes(ql) || plain.includes(ql);
+    });
+  }
 
   if (notes.length === 0) {
     container.innerHTML = '<div class="empty-state">暂无笔记</div>';
@@ -579,12 +620,16 @@ async function renderEditNoteList() {
     const title = n.title || (n.plain_text || htmlToPlain(n.content)).substring(0, 30);
     const plain = n.plain_text || htmlToPlain(n.content);
     const preview = plain.substring(0, 60) + (plain.length > 60 ? '...' : '');
+    const tags = (n.tags || '').split(',').filter(Boolean);
     const active = n.id === state.currentNoteId ? 'active' : '';
     return `
       <div class="edit-note-item ${active}" data-id="${n.id}" onclick="openNoteDetail(${n.id})">
         <div class="title-line">${escapeHtml(title)}</div>
         <div class="preview-line">${escapeHtml(preview)}</div>
-        <div class="meta-line">${n.date}</div>
+        <div class="meta-line">
+          <span>${n.date}</span>
+          ${tags.map(t => `<span class="note-tag" style="background:${getTagColor(t)};font-size:10px;height:18px;margin-left:4px">${escapeHtml(t)}</span>`).join('')}
+        </div>
       </div>`;
   }).join('');
 }
@@ -790,6 +835,8 @@ async function renderEditView() {
   if (!state.currentNoteId) {
     document.getElementById('detailTitle').value = '';
     document.getElementById('detailBody').innerHTML = '';
+    state.detailTags = [];
+    document.querySelectorAll('#detailTbTags .tb-tag').forEach(b => b.classList.remove('active'));
   }
 }
 
@@ -921,6 +968,42 @@ async function renderStatsView() {
   yearSel.onchange = () => renderStatsView();
   monthSel.onchange = () => renderStatsView();
 }
+// ─── Resizable Image Helper ────────────────────────────────
+function createResizableImage(src) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'img-resizable';
+  wrapper.setAttribute('contenteditable', 'false');
+  const img = document.createElement('img');
+  img.src = src;
+  img.draggable = false;
+  img.onload = () => {
+    const w = Math.min(img.naturalWidth || 400, 600);
+    const h = img.naturalHeight ? (w / img.naturalWidth * img.naturalHeight) : 300;
+    wrapper.style.width = w + 'px';
+    wrapper.style.height = h + 'px';
+  };
+  wrapper.appendChild(img);
+  return wrapper;
+}
+
+function insertImageIntoEditor(editorEl, src) {
+  editorEl.focus();
+  const wrapper = createResizableImage(src);
+  const sel = window.getSelection();
+  if (sel.rangeCount) {
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(wrapper);
+    range.setStartAfter(wrapper);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else {
+    editorEl.appendChild(wrapper);
+    editorEl.appendChild(document.createElement('br'));
+  }
+}
+
 function setupImageHandling() {
   const editorBody = document.getElementById('editorBody');
   const detailBody = document.getElementById('detailBody');
@@ -934,6 +1017,7 @@ function setupImageHandling() {
 
     for (const item of items) {
       if (item.type.startsWith('image/')) {
+        e.preventDefault(); // block browser's own image paste
         const blob = item.getAsFile();
         state.pendingImage = blob;
 
@@ -942,20 +1026,7 @@ function setupImageHandling() {
         reader.onload = (ev) => {
           const activeEl = document.activeElement;
           if (activeEl === editorBody || activeEl === detailBody) {
-            const img = document.createElement('img');
-            img.src = ev.target.result;
-            img.style.maxWidth = '100%';
-
-            // Insert at cursor
-            const sel = window.getSelection();
-            if (sel.rangeCount) {
-              const range = sel.getRangeAt(0);
-              range.deleteContents();
-              range.insertNode(img);
-              range.collapse(false);
-            } else {
-              activeEl.appendChild(img);
-            }
+            insertImageIntoEditor(activeEl, ev.target.result);
           }
         };
         reader.readAsDataURL(blob);
@@ -975,10 +1046,7 @@ function setupImageHandling() {
 
       const reader = new FileReader();
       reader.onload = (ev) => {
-        const img = document.createElement('img');
-        img.src = ev.target.result;
-        img.style.maxWidth = '100%';
-        editorBody.appendChild(img);
+        insertImageIntoEditor(editorBody, ev.target.result);
       };
       reader.readAsDataURL(blob);
     }
@@ -999,10 +1067,7 @@ function setupImageHandling() {
         if (result) {
           const dataUrl = await readImageFile(result.filename);
           if (dataUrl) {
-            const img = document.createElement('img');
-            img.src = dataUrl;
-            img.style.maxWidth = '100%';
-            detailBody.appendChild(img);
+            insertImageIntoEditor(detailBody, dataUrl);
           }
         }
       } else {
@@ -1010,10 +1075,7 @@ function setupImageHandling() {
         state.pendingImage = blob;
         const reader = new FileReader();
         reader.onload = (ev) => {
-          const img = document.createElement('img');
-          img.src = ev.target.result;
-          img.style.maxWidth = '100%';
-          detailBody.appendChild(img);
+          insertImageIntoEditor(detailBody, ev.target.result);
         };
         reader.readAsDataURL(blob);
       }
@@ -1041,6 +1103,36 @@ function setupToolbar() {
 }
 
 // ─── Search ───────────────────────────────────────────────
+async function renderSearchedEditList(q) {
+  const start = `${state.yearDate.getFullYear()}-01-01`;
+  const end = `${state.yearDate.getFullYear()}-12-31`;
+  const notes = await loadNotesByRange(start, end);
+  const container = document.getElementById('editNoteList');
+  const ql = q.toLowerCase();
+  const filtered = notes.filter(n => {
+    const title = (n.title || '').toLowerCase();
+    const plain = (n.plain_text || '').toLowerCase();
+    return title.includes(ql) || plain.includes(ql);
+  });
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state">未找到包含「${escapeHtml(q)}」的笔记</div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(n => {
+    const title = n.title || (n.plain_text || htmlToPlain(n.content)).substring(0, 30);
+    const plain = n.plain_text || htmlToPlain(n.content);
+    const preview = plain.substring(0, 60) + (plain.length > 60 ? '...' : '');
+    const tags = (n.tags || '').split(',').filter(Boolean);
+    const active = n.id === state.currentNoteId ? 'active' : '';
+    return `
+      <div class="edit-note-item ${active}" data-id="${n.id}" onclick="openNoteDetail(${n.id})">
+        <div class="title-line">${escapeHtml(title)}</div>
+        <div class="preview-line">${escapeHtml(preview)}</div>
+        <div class="meta-line"><span>${n.date}</span>${tags.map(t => `<span class="note-tag" style="background:${getTagColor(t)};font-size:10px;height:18px;margin-left:4px">${escapeHtml(t)}</span>`).join('')}</div>
+      </div>`;
+  }).join('');
+}
+
 function setupSearch() {
   document.getElementById('searchInput').addEventListener('input', async (e) => {
     const q = e.target.value.trim();
@@ -1050,12 +1142,14 @@ function setupSearch() {
       // Clear filter, re-render current view
       if (state.currentView === 'month') renderMonthView();
       if (state.currentView === 'week') renderWeekView();
+      if (state.currentView === 'edit') renderEditNoteList();
       return;
     }
 
     // Re-render current view with search filter applied
     if (state.currentView === 'month') renderMonthView();
     if (state.currentView === 'week') renderWeekView();
+    if (state.currentView === 'edit') renderEditNoteList();
   });
 }
 
@@ -1157,6 +1251,27 @@ function setupKeyboard() {
   });
 }
 
+// ─── Theme Switching ───────────────────────────────────────
+function setupTheme() {
+  const saved = localStorage.getItem('noteflow-theme') || 'warm';
+  applyTheme(saved);
+
+  document.querySelectorAll('.theme-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const theme = btn.dataset.theme;
+      applyTheme(theme);
+      localStorage.setItem('noteflow-theme', theme);
+    });
+  });
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.querySelectorAll('.theme-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.theme === theme);
+  });
+}
+
 // ─── Init ─────────────────────────────────────────────────
 async function init() {
   setupNavigation();
@@ -1164,6 +1279,7 @@ async function init() {
   setupImageHandling();
   setupSearch();
   setupKeyboard();
+  setupTheme();
 
   // Load tags first (needed for toolbar rendering)
   await loadTags();
@@ -1182,6 +1298,22 @@ async function init() {
   // Chart resize on window resize
   window.addEventListener('resize', () => {
     Object.values(statsCharts).forEach(c => { try { c.resize(); } catch (e) {} });
+  });
+
+  // ── Auto-save listeners ───────────────────────────────
+  const els = [
+    document.getElementById('editorBody'),
+    document.getElementById('quickTitle'),
+    document.getElementById('detailBody'),
+    document.getElementById('detailTitle')
+  ];
+  els.forEach(el => {
+    if (!el) return;
+    el.addEventListener('input', scheduleAutoSave);
+  });
+  // Tag clicks in both toolbars
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.tb-tag')) scheduleAutoSave();
   });
 }
 

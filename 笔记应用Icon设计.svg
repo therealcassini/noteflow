@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 340" width="100%" role="img">
+  <title>笔记应用Icon</title>
+  <desc>简洁纯色风格的笔记应用图标 — 紫色圆角方形底板 + 白色翻页符号</desc>
+
+  <!-- 背景 -->
+  <rect x="20" y="20" width="300" height="300" rx="56" fill="#7F77DD" />
+
+  <!-- 页面主体 -->
+  <path d="M 75 64 L 229 64 L 265 100 L 265 297 L 75 297 Z" fill="#FFFFFF" />
+
+  <!-- 翻页折角 -->
+  <path d="M 229 64 L 265 64 L 265 100 Z" fill="#EEEDFE" />
+
+  <!-- 页面横线 -->
+  <line x1="93" y1="120" x2="220" y2="120" stroke="#CECBF6" stroke-width="6" stroke-linecap="round" />
+  <line x1="93" y1="150" x2="242" y2="150" stroke="#CECBF6" stroke-width="6" stroke-linecap="round" />
+  <line x1="93" y1="180" x2="175" y2="180" stroke="#CECBF6" stroke-width="6" stroke-linecap="round" />
+  <line x1="93" y1="210" x2="230" y2="210" stroke="#CECBF6" stroke-width="6" stroke-linecap="round" />
+  <line x1="93" y1="240" x2="210" y2="240" stroke="#CECBF6" stroke-width="6" stroke-linecap="round" />
+
+  <!-- 顶部书签 -->
+  <path d="M 145 64 L 165 64 L 165 74 L 155 68 L 145 74 Z" fill="#534AB7" />
+</svg>

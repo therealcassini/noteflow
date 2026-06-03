@@ -15,10 +15,6 @@
 
   <!-- ═══════════════ SIDEBAR ═══════════════ -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <span class="logo-text">NoteFlow</span>
-      <span class="logo-subtitle">轻量笔记 · 日历视图</span>
-    </div>
 
     <div class="sidebar-search">
       <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -66,6 +62,27 @@
     </div>
 
     <div class="sidebar-section">
+      <span class="section-label">皮肤</span>
+      <div class="theme-list" id="themeList">
+        <button class="theme-item active" data-theme="warm">
+          <span class="theme-swatch warm"></span>暖黄
+        </button>
+        <button class="theme-item" data-theme="dark">
+          <span class="theme-swatch dark"></span>暗夜
+        </button>
+        <button class="theme-item" data-theme="mint">
+          <span class="theme-swatch mint"></span>薄荷
+        </button>
+        <button class="theme-item" data-theme="lavender">
+          <span class="theme-swatch lavender"></span>薰衣草
+        </button>
+        <button class="theme-item" data-theme="light">
+          <span class="theme-swatch light"></span>极简白
+        </button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
       <span class="section-label">标签</span>
       <div class="tag-list" id="tagList"></div>
       <div class="tag-add-row">
@@ -107,15 +124,15 @@
           </div>
 
           <div class="quick-editor" id="quickEditor">
-            <input type="text" class="editor-title-input" id="quickTitle" placeholder="笔记标题（可选）">
+            <input type="text" class="editor-title-input" id="quickTitle" placeholder="笔记标题（可选）" spellcheck="false">
             <div class="editor-toolbar">
-              <button class="tb-btn" data-cmd="bold" title="加粗"><b>B</b></button>
-              <button class="tb-btn" data-cmd="italic" title="斜体"><i>I</i></button>
-              <button class="tb-btn" data-cmd="insertUnorderedList" title="列表">≡</button>
-              <button class="tb-btn" id="btnInsertImage" title="插入图片">🖼</button>
+              <button class="tb-btn" data-cmd="bold" title="加粗"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z"/><path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"/></svg></button>
+              <button class="tb-btn" data-cmd="italic" title="斜体"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+              <button class="tb-btn" data-cmd="insertUnorderedList" title="无序列表"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="6" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="18" r="1.5" fill="currentColor" stroke="none"/><line x1="10" y1="6" x2="20" y2="6"/><line x1="10" y1="12" x2="20" y2="12"/><line x1="10" y1="18" x2="20" y2="18"/></svg></button>
+              <button class="tb-btn" id="btnInsertImage" title="插入图片"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="3"/><circle cx="8" cy="9" r="2"/><path d="M22 16l-6-6-6 8-4-4-4 5"/></svg></button>
               <div class="tb-tags" id="tbTags"></div>
             </div>
-            <div class="editor-body" contenteditable="true" id="editorBody" placeholder="写下你的想法...&#10;支持粘贴图片 (Ctrl+V)"></div>
+            <div class="editor-body" contenteditable="true" id="editorBody" spellcheck="false" placeholder="写下你的想法...&#10;支持粘贴图片 (Ctrl+V)"></div>
             <div class="editor-footer">
               <span class="current-tags" id="currentTags"></span>
               <button class="btn-save" id="btnSaveNote">保存笔记</button>
@@ -215,20 +232,22 @@
               返回
             </button>
             <span class="tb-sep">|</span>
-            <button class="tb-btn" data-cmd="formatBlock" data-val="h1" title="标题1">H1</button>
-            <button class="tb-btn" data-cmd="formatBlock" data-val="h2" title="标题2">H2</button>
-            <button class="tb-btn" data-cmd="bold" title="加粗"><b>B</b></button>
-            <button class="tb-btn" data-cmd="italic" title="斜体"><i>I</i></button>
-            <button class="tb-btn" data-cmd="underline" title="下划线"><u>U</u></button>
-            <button class="tb-btn" data-cmd="insertUnorderedList" title="无序列表">≡</button>
-            <button class="tb-btn" data-cmd="insertOrderedList" title="有序列表">≣</button>
-            <button class="tb-btn" id="detailInsertImage" title="插入图片">🖼</button>
+            <button class="tb-btn tb-label" data-cmd="formatBlock" data-val="h1" title="标题1">H1</button>
+            <button class="tb-btn tb-label" data-cmd="formatBlock" data-val="h2" title="标题2">H2</button>
+            <button class="tb-btn" data-cmd="bold" title="加粗"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z"/><path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"/></svg></button>
+            <button class="tb-btn" data-cmd="italic" title="斜体"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+            <button class="tb-btn" data-cmd="underline" title="下划线"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 4v7a6 6 0 006 6 6 6 0 006-6V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg></button>
+            <button class="tb-btn" data-cmd="insertUnorderedList" title="无序列表"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="6" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="18" r="1.5" fill="currentColor" stroke="none"/><line x1="10" y1="6" x2="20" y2="6"/><line x1="10" y1="12" x2="20" y2="12"/><line x1="10" y1="18" x2="20" y2="18"/></svg></button>
+            <button class="tb-btn" data-cmd="insertOrderedList" title="有序列表"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><text x="3" y="8" font-size="9" fill="currentColor" stroke="none" font-weight="700">1</text><line x1="10" y1="6" x2="20" y2="6"/><text x="2" y="15" font-size="9" fill="currentColor" stroke="none" font-weight="700">2</text><line x1="10" y1="12" x2="20" y2="12"/><text x="2" y="22" font-size="9" fill="currentColor" stroke="none" font-weight="700">3</text><line x1="10" y1="18" x2="20" y2="18"/></svg></button>
+            <button class="tb-btn" id="detailInsertImage" title="插入图片"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="3"/><circle cx="8" cy="9" r="2"/><path d="M22 16l-6-6-6 8-4-4-4 5"/></svg></button>
+            <div class="tb-tags" id="detailTbTags"></div>
             <span class="tb-grow"></span>
-            <button class="tb-btn tb-danger" id="btnDeleteNote" title="删除">🗑</button>
-            <button class="tb-btn tb-primary" id="btnUpdateNote" title="保存">保存</button>
+            <button class="tb-btn tb-danger" id="btnDeleteNote" title="删除"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
+            <button class="tb-btn tb-primary" id="btnUpdateNote" title="保存"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>
           </div>
-          <input type="text" class="detail-title-input" id="detailTitle" placeholder="笔记标题">
-          <div class="detail-body" contenteditable="true" id="detailBody"></div>
+          <input type="text" class="detail-title-input" id="detailTitle" placeholder="笔记标题" spellcheck="false">
+          <div class="detail-body" contenteditable="true" id="detailBody" spellcheck="false"></div>
+          <div class="autosave-indicator hidden" id="autosaveIndicator">已自动保存</div>
         </div>
       </div>
     </section>
