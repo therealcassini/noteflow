@@ -2,12 +2,58 @@
   "name": "noteflow",
   "version": "1.0.0",
   "description": "NoteFlow - 轻量笔记日历应用",
+  "author": "therealcassini",
   "main": "main.js",
   "scripts": {
     "start": "node start.js",
+    "build": "electron-builder --win portable",
+    "build:installer": "electron-builder --win nsis",
+    "dist": "npm run build && npm run build:installer",
     "dev": "node start.js --dev"
   },
-  "dependencies": {
-    "electron": "31.7.7"
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.noteflow.app",
+    "productName": "NoteFlow",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "start.js",
+      "index.html",
+      "app.js",
+      "styles.css"
+    ],
+    "extraResources": [
+      {
+        "from": "upload",
+        "to": "upload"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        },
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "NoteFlow"
+    }
   }
 }
