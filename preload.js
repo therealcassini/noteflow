@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('noteFlow', {
 
   // Charts
   getStatsData: (opts) => ipcRenderer.invoke('stats:getData', opts),
+  extractBase64Images: (data) => ipcRenderer.invoke('image:extractBase64', data),
 
   // Dialog
   openImageDialog: () => ipcRenderer.invoke('dialog:openImage')

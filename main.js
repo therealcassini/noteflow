@@ -1,12 +1,12 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, protocol, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 // ─── Paths ───────────────────────────────────────────────
-const UPLOAD_DIR = path.join(__dirname, 'upload');
+const IMAGE_DIR = path.join(__dirname, 'data', 'images');
 
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+if (!fs.existsSync(IMAGE_DIR)) {
+  fs.mkdirSync(IMAGE_DIR, { recursive: true });
 }
 
 // ─── JSON File Store ─────────────────────────────────────
@@ -135,7 +135,7 @@ function setupIPC() {
     // Delete associated image files
     const imgs = store.images.filter(img => img.note_id === id);
     for (const img of imgs) {
-      const imgPath = path.join(UPLOAD_DIR, img.subdir || '', img.filename);
+      const imgPath = path.join(IMAGE_DIR, img.subdir || '', img.filename);
       if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
     }
     // Remove images metadata
@@ -300,11 +300,60 @@ function setupIPC() {
   });
 
   // Image handling
+
+  // Extract base64 images from content, save to files, return modified content
+  ipcMain.handle('image:extractBase64', (_, { content, noteId, date }) => {
+    loadStore();
+    const subdir = date ? date.substring(0, 7).replace('-', '_') : `${new Date().getFullYear()}_${String(new Date().getMonth()+1).padStart(2,'0')}`;
+    const subdirPath = path.join(IMAGE_DIR, subdir);
+    if (!fs.existsSync(subdirPath)) fs.mkdirSync(subdirPath, { recursive: true });
+
+    const imgRegex = /<img\s[^>]*src="data:image\/(png|jpe?g|gif|webp);base64,([^"]+)"[^>]*>/gi;
+    const imgTagRegex = /<img\s[^>]*>/gi;
+
+    let modified = content;
+    const savedImages = [];
+    const allTags = content.match(imgTagRegex) || [];
+
+    for (const tag of allTags) {
+      const m = /src="data:image\/(png|jpe?g|gif|webp);base64,([^"]+)"/i.exec(tag);
+      if (!m) continue;
+      const ext = '.' + m[1].replace('jpeg', 'jpg');
+      const buffer = Buffer.from(m[2], 'base64');
+      const filename = `${Date.now()}_${Math.random().toString(36).slice(2,8)}${ext}`;
+      const filepath = path.join(subdirPath, filename);
+      fs.writeFileSync(filepath, buffer);
+      Date.now = Date.now; // no-op, just advancing
+
+      // Replace base64 src with protocol reference
+      modified = modified.replace(m[0], `src="noteflow-img://${subdir}/${filename}"`);
+
+      savedImages.push({
+        id: store.nextImageId++,
+        note_id: noteId,
+        subdir,
+        filename,
+        original_name: filename,
+        created_at: new Date().toISOString()
+      });
+    }
+
+    store.images.push(...savedImages);
+
+    // Mark note as having images if we saved any
+    if (savedImages.length > 0) {
+      const note = store.notes.find(n => n.id === noteId);
+      if (note) note.has_image = 1;
+    }
+
+    saveStore();
+    return { content: modified, images: savedImages };
+  });
   ipcMain.handle('image:save', (_, { noteId, buffer, originalName }) => {
     loadStore();
     const now = new Date();
     const subdir = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const subdirPath = path.join(UPLOAD_DIR, subdir);
+    const subdirPath = path.join(IMAGE_DIR, subdir);
     if (!fs.existsSync(subdirPath)) fs.mkdirSync(subdirPath, { recursive: true });
 
     const ext = path.extname(originalName) || '.png';
@@ -354,7 +403,7 @@ function setupIPC() {
       }
       return null;
     };
-    const filepath = searchFile(UPLOAD_DIR);
+    const filepath = searchFile(IMAGE_DIR);
     if (!filepath) return null;
 
     const ext = path.extname(filename).toLowerCase();
@@ -374,7 +423,7 @@ function setupIPC() {
     if (idx === -1) return { success: false };
 
     const img = store.images[idx];
-    const filepath = path.join(UPLOAD_DIR, img.subdir || '', img.filename);
+    const filepath = path.join(IMAGE_DIR, img.subdir || '', img.filename);
     if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
 
     store.images.splice(idx, 1);
@@ -431,6 +480,13 @@ function createWindow() {
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
+
+  // Register custom protocol for images
+  protocol.handle('noteflow-img', (request) => {
+    const url = request.url.replace('noteflow-img://', '');
+    const filePath = path.join(IMAGE_DIR, decodeURIComponent(url));
+    return net.fetch(`file:///${filePath.replace(/\\/g, '/')}`);
+  });
   initDatabase();
   setupIPC();
   createWindow();

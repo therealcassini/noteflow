@@ -427,7 +427,7 @@ function renderNoteList(notes) {
     return `
       <div class="note-card" data-id="${n.id}" onclick="openNoteDetail(${n.id})">
         ${title}
-        <div class="note-content">${n.content}</div>
+        <div class="note-content">${n.content || ''}</div>
         <div class="note-meta">
           ${tags.map(t => `<span class="note-tag" style="background:${getTagColor(t)}">${escapeHtml(t)}</span>`).join('')}
           <span class="note-time">${timeStr}</span>
@@ -466,6 +466,17 @@ async function updateTagCounts(year, month) {
 }
 
 // ─── Note CRUD ───────────────────────────────────────────
+
+// Extract base64 images from content, save to files via IPC
+async function extractContentImages(content, noteId, dateStr) {
+  if (!content || !content.includes('data:image')) return { content };
+  try {
+    return await api.extractBase64Images({ content, noteId, date: dateStr });
+  } catch (e) {
+    return { content };
+  }
+}
+
 async function saveNote() {
   const dateStr = state.selectedDate || formatDate(new Date());
   const title = document.getElementById('quickTitle').value.trim();
@@ -473,11 +484,12 @@ async function saveNote() {
   if (!title && !content) { alert('请输入标题或内容'); return; }
   const plainText = htmlToPlain(content);
   const tags = state.selectedTags.join(',');
+  const { content: cleanContent } = await extractContentImages(content, state.currentNoteId, dateStr);
 
   if (state.currentNoteId) {
-    await updateNote({ id: state.currentNoteId, title, content, plain_text: plainText, tags });
+    await updateNote({ id: state.currentNoteId, title, content: cleanContent, plain_text: plainText, tags });
   } else {
-    const result = await createNote({ title, content, plain_text: plainText, date: dateStr, tags });
+    const result = await createNote({ title, content: cleanContent, plain_text: plainText, date: dateStr, tags });
     if (result) state.currentNoteId = result.id;
   }
 
@@ -521,15 +533,6 @@ async function openNoteDetail(id) {
     btn.classList.toggle('active', state.detailTags.includes(btn.dataset.tag));
   });
 
-  // Load images and append to body
-  const images = await getNoteImages(id);
-  for (const img of images) {
-      const dataUrl = await readImageFile(img.filename);
-      if (dataUrl) {
-        insertImageIntoEditor(document.getElementById('detailBody'), dataUrl);
-      }
-  }
-
   // Switch to edit view with this note
   switchView('edit');
   renderEditNoteList();
@@ -546,8 +549,26 @@ async function saveNoteDetail() {
     tagNames.push(btn.dataset.tag);
   });
   state.detailTags = tagNames;
-  await updateNote({ id: state.currentNoteId, title, content, plain_text: plainText, tags: tagNames.join(',') });
-  renderEditNoteList();
+  const { content: cleanContent } = await extractContentImages(content, state.currentNoteId);
+  await updateNote({ id: state.currentNoteId, title, content: cleanContent, plain_text: plainText, tags: tagNames.join(',') });
+
+  // Immediately update the list item for this note (no flash)
+  const listItem = document.querySelector(`.edit-note-item[data-id="${state.currentNoteId}"]`);
+  if (listItem) {
+    const titleLine = listItem.querySelector('.title-line');
+    const previewLine = listItem.querySelector('.preview-line');
+    const metaLine = listItem.querySelector('.meta-line');
+    if (titleLine) titleLine.textContent = title || plainText.substring(0, 30) || '(无标题)';
+    if (previewLine) {
+      const p = plainText || content.replace(/<[^>]+>/g, '');
+      previewLine.textContent = p.substring(0, 60) + (p.length > 60 ? '...' : '');
+    }
+    if (metaLine) {
+      const dateSpan = metaLine.querySelector('span');
+      const tagsHtml = tagNames.map(t => `<span class="note-tag" style="background:${getTagColor(t)};font-size:10px;height:18px;margin-left:4px">${escapeHtml(t)}</span>`).join('');
+      if (dateSpan) metaLine.innerHTML = `<span>${dateSpan.textContent}</span>${tagsHtml}`;
+    }
+  }
 }
 
 async function deleteCurrentNote() {
@@ -579,8 +600,9 @@ async function saveNoteSilent() {
   const title = document.getElementById('quickTitle').value.trim();
   const content = document.getElementById('editorBody').innerHTML;
   const plainText = htmlToPlain(content);
+  const { content: cleanContent } = await extractContentImages(content, state.currentNoteId);
   const tags = state.selectedTags.join(',');
-  await updateNote({ id: state.currentNoteId, title, content, plain_text: plainText, tags });
+  await updateNote({ id: state.currentNoteId, title, content: cleanContent, plain_text: plainText, tags });
 }
 
 function showAutoSaveIndicator() {
